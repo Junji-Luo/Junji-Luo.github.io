@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>队伍抽签</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #6b7280;
+      --line: #e6eaf0;
+      --primary: #3563e9;
+      --primary-dark: #274dcc;
+      --soft: #eef3ff;
+      --danger: #e05252;
+      --shadow: 0 18px 45px rgba(31, 45, 78, .10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(53,99,233,.12), transparent 28rem),
+        radial-gradient(circle at 100% 20%, rgba(41,185,151,.09), transparent 25rem),
+        var(--bg);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+    .page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 56px; }
+    header { margin-bottom: 26px; }
+    .eyebrow { color: var(--primary); font-size: 13px; font-weight: 700; letter-spacing: .16em; margin-bottom: 9px; }
+    h1 { margin: 0; font-size: clamp(30px, 4vw, 46px); line-height: 1.15; letter-spacing: -.03em; }
+    .subtitle { color: var(--muted); margin: 12px 0 0; font-size: 15px; }
+    .layout { display: grid; grid-template-columns: minmax(300px, 390px) 1fr; gap: 22px; align-items: start; }
+    .card { background: rgba(255,255,255,.93); border: 1px solid rgba(230,234,240,.9); border-radius: 20px; box-shadow: var(--shadow); }
+    .setup { padding: 24px; position: sticky; top: 20px; }
+    .result { padding: 24px; min-height: 540px; }
+    .section-title { margin: 0; font-size: 18px; }
+    .section-desc { color: var(--muted); font-size: 13px; margin: 7px 0 20px; line-height: 1.6; }
+    label { display: block; font-size: 13px; font-weight: 700; margin: 17px 0 8px; }
+    textarea, input {
+      width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px;
+      font: inherit; color: var(--ink); outline: none; background: #fbfcfe; transition: .2s;
+    }
+    textarea { min-height: 300px; resize: vertical; line-height: 1.75; }
+    textarea:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(53,99,233,.11); background: #fff; }
+    input[type=number] { width: 120px; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .stats { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .stats strong { color: var(--primary); }
+    .actions { display: flex; gap: 10px; margin-top: 22px; }
+    button { border: 0; border-radius: 12px; padding: 12px 17px; font: inherit; font-weight: 700; cursor: pointer; transition: transform .15s, background .15s, box-shadow .15s; }
+    button:hover { transform: translateY(-1px); }
+    .primary { flex: 1; color: #fff; background: var(--primary); box-shadow: 0 8px 18px rgba(53,99,233,.25); }
+    .primary:hover { background: var(--primary-dark); }
+    .secondary { color: #405066; background: #edf0f5; }
+    .secondary:hover { background: #e3e7ee; }
+    .result-head { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 20px; }
+    .result-head p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .badge { color: var(--primary); background: var(--soft); border-radius: 99px; padding: 7px 11px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+    .group { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: #fff; animation: rise .35s ease both; }
+    .group-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: linear-gradient(135deg, #f3f6ff, #f9fbff); border-bottom: 1px solid var(--line); }
+    .group-name { font-weight: 800; }
+    .group-count { color: var(--muted); font-size: 12px; }
+    ul { list-style: none; padding: 8px 16px 13px; margin: 0; }
+    li { padding: 9px 0; border-bottom: 1px dashed #edf0f4; font-size: 14px; display: flex; gap: 9px; align-items: center; }
+    li:last-child { border-bottom: 0; }
+    .number { color: var(--primary); font-variant-numeric: tabular-nums; font-weight: 700; width: 20px; }
+    .empty { min-height: 400px; display: grid; place-items: center; text-align: center; color: var(--muted); border: 1px dashed #d9deea; border-radius: 16px; background: #fbfcfe; padding: 30px; }
+    .empty-icon { font-size: 42px; margin-bottom: 12px; }
+    .notice { color: var(--danger); font-size: 13px; min-height: 18px; margin-top: 12px; }
+    .footer-note { color: var(--muted); font-size: 12px; margin-top: 18px; text-align: center; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 780px) { .page { padding-top: 26px; } .layout { grid-template-columns: 1fr; } .setup { position: static; } textarea { min-height: 220px; } .result { min-height: auto; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow">RANDOM DRAW</div>
+      <h1>队伍抽签</h1>
+      <p class="subtitle">录入队伍名称，设置分组数量，一键随机生成分组结果。</p>
+    </header>
+
+    <section class="layout">
+      <div class="card setup">
+        <h2 class="section-title">抽签设置</h2>
+        <p class="section-desc">每行输入一个队伍名称。</p>
+        <label for="teams">队伍名单</label>
+        <textarea id="teams" placeholder="例如：<br>一队<br>二队<br>三队"></textarea>
+        <div class="stats"><span>当前队伍数：<strong id="teamCount">0</strong></span><span>支持重复抽签</span></div>
+        <label for="groupCount">分组数量</label>
+        <div class="row">
+          <input id="groupCount" type="number" min="1" value="3" />
+          <span class="hint" id="distributionHint">请输入队伍后查看分配情况</span>
+        </div>
+        <div class="notice" id="notice"></div>
+        <div class="actions">
+          <button class="primary" id="drawBtn">开始随机抽签</button>
+          <button class="secondary" id="clearBtn">清空</button>
+        </div>
+        <p class="footer-note">名单会自动保存在当前浏览器中，仅保存在本机。</p>
+      </div>
+
+      <div class="card result">
+        <div class="result-head">
+          <div><h2 class="section-title">分组结果</h2><p id="resultSummary">完成设置后，点击“开始随机抽签”</p></div>
+          <span class="badge" id="resultBadge">等待抽签</span>
+        </div>
+        <div id="groups" class="empty">
+          <div><div class="empty-icon">🎲</div><div>随机打乱队伍后，<br />分组结果会显示在这里</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const teamsInput = document.getElementById('teams');
+    const groupInput = document.getElementById('groupCount');
+    const teamCount = document.getElementById('teamCount');
+    const distributionHint = document.getElementById('distributionHint');
+    const notice = document.getElementById('notice');
+    const groups = document.getElementById('groups');
+    const summary = document.getElementById('resultSummary');
+    const badge = document.getElementById('resultBadge');
+    const storageKey = 'simple-team-draw-data';
+
+    const getTeams = () => teamsInput.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const getDistribution = (total, count) => {
+      if (!total || !count) return [];
+      const base = Math.floor(total / count), extra = total % count;
+      return Array.from({ length: count }, (_, i) => base + (i < extra ? 1 : 0));
+    };
+    const updateInfo = () => {
+      const total = getTeams().length;
+      let count = Math.max(1, Number.parseInt(groupInput.value, 10) || 1);
+      teamCount.textContent = total;
+      if (!total) { distributionHint.textContent = '请输入队伍后查看分配情况'; return; }
+      count = Math.min(count, total);
+      const values = getDistribution(total, count);
+      distributionHint.textContent = `预计每组 ${Math.min(...values)}～${Math.max(...values)} 支`;
+      if (Number(groupInput.value) > total) groupInput.value = total;
+      localStorage.setItem(storageKey, JSON.stringify({ teams: teamsInput.value, groupCount: groupInput.value }));
+    };
+    const shuffle = items => {
+      const result = [...items];
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    };
+    const draw = () => {
+      const list = getTeams();
+      const count = Number.parseInt(groupInput.value, 10);
+      notice.textContent = '';
+      if (list.length < 1) { notice.textContent = '请至少输入 1 支队伍。'; teamsInput.focus(); return; }
+      if (!Number.isInteger(count) || count < 1) { notice.textContent = '分组数量必须是大于 0 的整数。'; groupInput.focus(); return; }
+      if (count > list.length) { notice.textContent = '分组数量不能超过队伍总数。'; groupInput.focus(); return; }
+      const sizes = getDistribution(list.length, count);
+      const shuffled = shuffle(list);
+      let cursor = 0;
+      groups.className = 'groups';
+      groups.innerHTML = sizes.map((size, index) => {
+        const members = shuffled.slice(cursor, cursor + size); cursor += size;
+        return `<article class="group" style="animation-delay:${index * 45}ms"><div class="group-head"><span class="group-name">第 ${index + 1} 组</span><span class="group-count">${size} 支队伍</span></div><ul>${members.map((team, i) => `<li><span class="number">${i + 1}</span><span>${escapeHtml(team)}</span></li>`).join('')}</ul></article>`;
+      }).join('');
+      summary.textContent = `共 ${list.length} 支队伍，随机分为 ${count} 组`;
+      badge.textContent = '抽签完成';
+    };
+    const escapeHtml = text => text.replace(/[&<>'"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[ch]));
+    document.getElementById('drawBtn').addEventListener('click', draw);
+    document.getElementById('clearBtn').addEventListener('click', () => { teamsInput.value = ''; groupInput.value = 4; groups.className = 'empty'; groups.innerHTML = '<div><div class="empty-icon">🎲</div><div>随机打乱队伍后，<br />分组结果会显示在这里</div></div>'; summary.textContent = '完成设置后，点击“开始随机抽签”'; badge.textContent = '等待抽签'; notice.textContent = ''; updateInfo(); });
+    teamsInput.addEventListener('input', updateInfo);
+    groupInput.addEventListener('input', updateInfo);
+    const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+    if (saved) { teamsInput.value = saved.teams || ''; groupInput.value = saved.groupCount || 4; }
+    updateInfo();
+  </script>
+</body>
+</html>
